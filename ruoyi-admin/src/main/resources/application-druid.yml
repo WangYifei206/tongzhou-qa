@@ -6,15 +6,15 @@ spring:
         druid:
             # 主库数据源
             master:
-                url: jdbc:mysql://127.0.0.1:3306/ry_vue?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=GMT%2B8
-                username: ruoyi
-                password: 123456.
+                url: jdbc:mysql://127.0.0.1:3306/your_database?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=GMT%2B8
+                username: your_db_username
+                password: your_db_password
             # 从库数据源
             slave:
                 # 从数据源开关/默认关闭
                 enabled: false
                 url: 
-                username: wo
+                username:
                 password: 
             # 初始连接数
             initialSize: 5
@@ -47,8 +47,8 @@ spring:
                 allow:
                 url-pattern: /druid/*
                 # 控制台管理用户名和密码
-                login-username: ruoyi
-                login-password: 123456
+                login-username: your_druid_username
+                login-password: your_druid_password
             filter:
                 stat:
                     enabled: true
