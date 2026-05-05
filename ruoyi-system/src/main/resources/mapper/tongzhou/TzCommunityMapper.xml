@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.tongzhou.TzCommunityMapper">
+
+    <select id="selectCategoryList" parameterType="TzCategory" resultType="com.ruoyi.system.domain.tongzhou.TzCategory">
+        select category_id, category_name, category_code, sort_num, status, description, create_by, create_time, update_by, update_time, remark
+        from tz_category
+        where del_flag = '0'
+        <if test="categoryName != null and categoryName != ''">
+            and category_name like concat('%', #{categoryName}, '%')
+        </if>
+        <if test="status != null and status != ''">
+            and status = #{status}
+        </if>
+        order by sort_num asc, category_id asc
+    </select>
+
+    <select id="selectEnabledCategories" resultType="com.ruoyi.system.domain.tongzhou.TzCategory">
+        select category_id, category_name, category_code, sort_num, status, description, create_by, create_time, update_by, update_time, remark
+        from tz_category
+        where del_flag = '0' and status = '0'
+        order by sort_num asc, category_id asc
+    </select>
+
+    <select id="selectCategoryById" parameterType="Long" resultType="com.ruoyi.system.domain.tongzhou.TzCategory">
+        select category_id, category_name, category_code, sort_num, status, description, create_by, create_time, update_by, update_time, remark
+        from tz_category
+        where category_id = #{categoryId} and del_flag = '0'
+    </select>
+
+    <insert id="insertCategory" parameterType="TzCategory" useGeneratedKeys="true" keyProperty="categoryId">
+        insert into tz_category(category_name, category_code, sort_num, status, description, create_by, create_time, remark)
+        values(#{categoryName}, #{categoryCode}, #{sortNum}, #{status}, #{description}, #{createBy}, sysdate(), #{remark})
+    </insert>
+
+    <update id="updateCategory" parameterType="TzCategory">
+        update tz_category
+        <set>
+            <if test="categoryName != null">category_name = #{categoryName},</if>
+            <if test="categoryCode != null">category_code = #{categoryCode},</if>
+            <if test="sortNum != null">sort_num = #{sortNum},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = sysdate()
+        </set>
+        where category_id = #{categoryId}
+    </update>
+
+    <update id="deleteCategoryByIds" parameterType="Long">
+        update tz_category
+        set del_flag = '2', update_time = sysdate()
+        where category_id in
+        <foreach collection="array" item="categoryId" open="(" separator="," close=")">
+            #{categoryId}
+        </foreach>
+    </update>
+
+    <select id="selectUserProfileByUserId" parameterType="Long" resultType="com.ruoyi.system.domain.tongzhou.TzUserProfile">
+        select p.profile_id, p.user_id, p.college, p.grade, p.major, p.introduction, p.status,
+               p.create_by, p.create_time, p.update_by, p.update_time, p.remark,
+               u.user_name, u.nick_name, u.email, u.phonenumber, u.avatar
+        from tz_user_profile p
+        inner join sys_user u on u.user_id = p.user_id
+        where p.user_id = #{userId} and p.del_flag = '0' and u.del_flag = '0'
+    </select>
+
+    <insert id="insertUserProfile" parameterType="TzUserProfile" useGeneratedKeys="true" keyProperty="profileId">
+        insert into tz_user_profile(user_id, college, grade, major, introduction, status, create_by, create_time, remark)
+        values(#{userId}, #{college}, #{grade}, #{major}, #{introduction}, #{status}, #{createBy}, sysdate(), #{remark})
+    </insert>
+
+    <update id="updateUserProfile" parameterType="TzUserProfile">
+        update tz_user_profile p
+        inner join sys_user u on u.user_id = p.user_id
+        <set>
+            <if test="nickName != null">u.nick_name = #{nickName},</if>
+            <if test="email != null">u.email = #{email},</if>
+            <if test="phonenumber != null">u.phonenumber = #{phonenumber},</if>
+            <if test="college != null">p.college = #{college},</if>
+            <if test="grade != null">p.grade = #{grade},</if>
+            <if test="major != null">p.major = #{major},</if>
+            <if test="introduction != null">p.introduction = #{introduction},</if>
+            p.update_time = sysdate()
+        </set>
+        where p.user_id = #{userId}
+    </update>
+
+    <select id="selectPortalUserProfiles" parameterType="TzUserProfile" resultType="com.ruoyi.system.domain.tongzhou.vo.PortalProfileVo">
+        select u.user_id, u.user_name, u.nick_name, u.email, u.phonenumber, u.avatar,
+               p.college, p.grade, p.major, p.introduction, u.create_time,
+               (select count(1) from tz_question q where q.user_id = u.user_id and q.del_flag = '0') as question_count,
+               (select count(1) from tz_answer a where a.user_id = u.user_id and a.del_flag = '0') as answer_count,
+               (select count(1) from tz_question_favorite f where f.user_id = u.user_id) as favorite_count
+        from sys_user u
+        left join tz_user_profile p on p.user_id = u.user_id and p.del_flag = '0'
+        where u.del_flag = '0' and u.user_type = '02'
+        <if test="userName != null and userName != ''">
+            and u.user_name like concat('%', #{userName}, '%')
+        </if>
+        <if test="nickName != null and nickName != ''">
+            and u.nick_name like concat('%', #{nickName}, '%')
+        </if>
+        <if test="college != null and college != ''">
+            and p.college like concat('%', #{college}, '%')
+        </if>
+        order by u.user_id desc
+    </select>
+
+    <sql id="questionVoColumns">
+        q.question_id, q.category_id, q.user_id, q.title, q.content,
+        left(q.content, 120) as summary, q.status, q.reject_reason, q.is_anonymous,
+        q.view_count, q.answer_count, q.favorite_count, q.create_time,
+        c.category_name,
+        u.user_name as publisher_name,
+        u.nick_name as publisher_nick_name
+    </sql>
+
+    <select id="selectPortalQuestionList" resultType="com.ruoyi.system.domain.tongzhou.vo.PortalQuestionListVo">
+        select
+        <include refid="questionVoColumns"/>,
+        <choose>
+            <when test="userId != null">
+                if(f.question_id is null, 'N', 'Y') as favorited
+            </when>
+            <otherwise>
+                'N' as favorited
+            </otherwise>
+        </choose>
+        from tz_question q
+        left join tz_category c on c.category_id = q.category_id
+        left join sys_user u on u.user_id = q.user_id
+        <if test="userId != null">
+            left join tz_question_favorite f on f.question_id = q.question_id and f.user_id = #{userId}
+        </if>
+        where q.del_flag = '0' and q.status = '1'
+        <if test="query != null and query.categoryId != null">
+            and q.category_id = #{query.categoryId}
+        </if>
+        <if test="query != null and query.keyword != null and query.keyword != ''">
+            and (q.title like concat('%', #{query.keyword}, '%') or q.content like concat('%', #{query.keyword}, '%'))
+        </if>
+        order by q.create_time desc
+    </select>
+
+    <select id="selectPortalHotQuestionList" resultType="com.ruoyi.system.domain.tongzhou.vo.PortalQuestionListVo">
+        select
+        <include refid="questionVoColumns"/>,
+        <choose>
+            <when test="userId != null">
+                if(f.question_id is null, 'N', 'Y') as favorited
+            </when>
+            <otherwise>
+                'N' as favorited
+            </otherwise>
+        </choose>
+        from tz_question q
+        left join tz_category c on c.category_id = q.category_id
+        left join sys_user u on u.user_id = q.user_id
+        <if test="userId != null">
+            left join tz_question_favorite f on f.question_id = q.question_id and f.user_id = #{userId}
+        </if>
+        where q.del_flag = '0' and q.status = '1'
+        order by q.answer_count desc, q.view_count desc, q.create_time desc
+        limit #{limit}
+    </select>
+
+    <select id="selectPortalQuestionDetail" resultType="com.ruoyi.system.domain.tongzhou.vo.PortalQuestionDetailVo">
+        select
+        <include refid="questionVoColumns"/>,
+        <choose>
+            <when test="userId != null">
+                if(f.question_id is null, 'N', 'Y') as favorited
+            </when>
+            <otherwise>
+                'N' as favorited
+            </otherwise>
+        </choose>
+        from tz_question q
+        left join tz_category c on c.category_id = q.category_id
+        left join sys_user u on u.user_id = q.user_id
+        <if test="userId != null">
+            left join tz_question_favorite f on f.question_id = q.question_id and f.user_id = #{userId}
+        </if>
+        where q.question_id = #{questionId} and q.del_flag = '0'
+    </select>
+
+    <select id="selectPortalMyQuestionList" parameterType="Long" resultType="com.ruoyi.system.domain.tongzhou.vo.PortalQuestionListVo">
+        select <include refid="questionVoColumns"/>, 'N' as favorited
+        from tz_question q
+        left join tz_category c on c.category_id = q.category_id
+        left join sys_user u on u.user_id = q.user_id
+        where q.del_flag = '0' and q.user_id = #{userId}
+        order by q.create_time desc
+    </select>
+
+    <select id="selectPortalFavoriteQuestionList" parameterType="Long" resultType="com.ruoyi.system.domain.tongzhou.vo.PortalQuestionListVo">
+        select <include refid="questionVoColumns"/>, 'Y' as favorited
+        from tz_question_favorite f
+        inner join tz_question q on q.question_id = f.question_id and q.del_flag = '0'
+        left join tz_category c on c.category_id = q.category_id
+        left join sys_user u on u.user_id = q.user_id
+        where f.user_id = #{userId} and q.status = '1'
+        order by f.create_time desc
+    </select>
+
+    <insert id="insertQuestion" parameterType="TzQuestion" useGeneratedKeys="true" keyProperty="questionId">
+        insert into tz_question(category_id, user_id, title, content, status, reject_reason, is_anonymous, view_count, answer_count, favorite_count, create_time)
+        values(#{categoryId}, #{userId}, #{title}, #{content}, #{status}, #{rejectReason}, #{isAnonymous}, #{viewCount}, #{answerCount}, #{favoriteCount}, sysdate())
+    </insert>
+
+    <update id="updateQuestion" parameterType="TzQuestion">
+        update tz_question
+        <set>
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="rejectReason != null">reject_reason = #{rejectReason},</if>
+            <if test="isAnonymous != null">is_anonymous = #{isAnonymous},</if>
+            <if test="viewCount != null">view_count = #{viewCount},</if>
+            <if test="answerCount != null">answer_count = #{answerCount},</if>
+            <if test="favoriteCount != null">favorite_count = #{favoriteCount},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where question_id = #{questionId}
+    </update>
+
+    <update id="increaseQuestionViewCount" parameterType="Long">
+        update tz_question set view_count = ifnull(view_count, 0) + 1 where question_id = #{questionId}
+    </update>
+
+    <select id="selectQuestionById" parameterType="Long" resultType="com.ruoyi.system.domain.tongzhou.TzQuestion">
+        select q.question_id, q.category_id, q.user_id, q.title, q.content, q.status, q.reject_reason, q.is_anonymous,
+               q.view_count, q.answer_count, q.favorite_count, q.create_by, q.create_time, q.update_by, q.update_time,
+               c.category_name, u.user_name as publisher_name, u.nick_name as publisher_nick_name
+        from tz_question q
+        left join tz_category c on c.category_id = q.category_id
+        left join sys_user u on u.user_id = q.user_id
+        where q.question_id = #{questionId} and q.del_flag = '0'
+    </select>
+
+    <select id="selectAdminQuestionList" parameterType="TzQuestion" resultType="com.ruoyi.system.domain.tongzhou.TzQuestion">
+        select q.question_id, q.category_id, q.user_id, q.title, q.content, q.status, q.reject_reason, q.is_anonymous,
+               q.view_count, q.answer_count, q.favorite_count, q.create_by, q.create_time, q.update_by, q.update_time,
+               c.category_name, u.user_name as publisher_name, u.nick_name as publisher_nick_name
+        from tz_question q
+        left join tz_category c on c.category_id = q.category_id
+        left join sys_user u on u.user_id = q.user_id
+        where q.del_flag = '0'
+        <if test="categoryId != null">
+            and q.category_id = #{categoryId}
+        </if>
+        <if test="status != null and status != ''">
+            and q.status = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            and (q.title like concat('%', #{keyword}, '%') or q.content like concat('%', #{keyword}, '%'))
+        </if>
+        order by q.create_time desc
+    </select>
+
+    <select id="selectApprovedAnswersByQuestionId" parameterType="Long" resultType="com.ruoyi.system.domain.tongzhou.vo.PortalAnswerVo">
+        select a.answer_id, a.question_id, a.user_id, a.content, a.status, a.reject_reason, a.is_anonymous,
+               a.like_count, a.create_time, q.title as question_title,
+               u.user_name as publisher_name, u.nick_name as publisher_nick_name
+        from tz_answer a
+        left join tz_question q on q.question_id = a.question_id
+        left join sys_user u on u.user_id = a.user_id
+        where a.question_id = #{questionId} and a.del_flag = '0' and a.status = '1'
+        order by a.create_time asc
+    </select>
+
+    <select id="selectPortalMyAnswerList" parameterType="Long" resultType="com.ruoyi.system.domain.tongzhou.vo.PortalAnswerVo">
+        select a.answer_id, a.question_id, a.user_id, a.content, a.status, a.reject_reason, a.is_anonymous,
+               a.like_count, a.create_time, q.title as question_title,
+               u.user_name as publisher_name, u.nick_name as publisher_nick_name
+        from tz_answer a
+        left join tz_question q on q.question_id = a.question_id
+        left join sys_user u on u.user_id = a.user_id
+        where a.user_id = #{userId} and a.del_flag = '0'
+        order by a.create_time desc
+    </select>
+
+    <insert id="insertAnswer" parameterType="TzAnswer" useGeneratedKeys="true" keyProperty="answerId">
+        insert into tz_answer(question_id, user_id, content, status, reject_reason, is_anonymous, like_count, create_time)
+        values(#{questionId}, #{userId}, #{content}, #{status}, #{rejectReason}, #{isAnonymous}, #{likeCount}, sysdate())
+    </insert>
+
+    <update id="updateAnswer" parameterType="TzAnswer">
+        update tz_answer
+        <set>
+            <if test="content != null">content = #{content},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="rejectReason != null">reject_reason = #{rejectReason},</if>
+            <if test="isAnonymous != null">is_anonymous = #{isAnonymous},</if>
+            <if test="likeCount != null">like_count = #{likeCount},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where answer_id = #{answerId}
+    </update>
+
+    <select id="selectAnswerById" parameterType="Long" resultType="com.ruoyi.system.domain.tongzhou.TzAnswer">
+        select a.answer_id, a.question_id, a.user_id, a.content, a.status, a.reject_reason, a.is_anonymous,
+               a.like_count, a.create_by, a.create_time, a.update_by, a.update_time,
+               q.title as question_title, u.user_name as publisher_name, u.nick_name as publisher_nick_name
+        from tz_answer a
+        left join tz_question q on q.question_id = a.question_id
+        left join sys_user u on u.user_id = a.user_id
+        where a.answer_id = #{answerId} and a.del_flag = '0'
+    </select>
+
+    <select id="selectAdminAnswerList" parameterType="TzAnswer" resultType="com.ruoyi.system.domain.tongzhou.TzAnswer">
+        select a.answer_id, a.question_id, a.user_id, a.content, a.status, a.reject_reason, a.is_anonymous,
+               a.like_count, a.create_by, a.create_time, a.update_by, a.update_time,
+               q.title as question_title, u.user_name as publisher_name, u.nick_name as publisher_nick_name
+        from tz_answer a
+        left join tz_question q on q.question_id = a.question_id
+        left join sys_user u on u.user_id = a.user_id
+        where a.del_flag = '0'
+        <if test="questionId != null">
+            and a.question_id = #{questionId}
+        </if>
+        <if test="status != null and status != ''">
+            and a.status = #{status}
+        </if>
+        <if test="content != null and content != ''">
+            and a.content like concat('%', #{content}, '%')
+        </if>
+        order by a.create_time desc
+    </select>
+
+    <insert id="insertQuestionFavorite">
+        insert into tz_question_favorite(question_id, user_id, create_time)
+        values(#{questionId}, #{userId}, sysdate())
+    </insert>
+
+    <delete id="deleteQuestionFavorite">
+        delete from tz_question_favorite where question_id = #{questionId} and user_id = #{userId}
+    </delete>
+
+    <select id="countQuestionFavorite" resultType="int">
+        select count(1) from tz_question_favorite where question_id = #{questionId} and user_id = #{userId}
+    </select>
+
+    <update id="recountQuestionAnswerCount" parameterType="Long">
+        update tz_question
+        set answer_count = (
+            select count(1)
+            from (
+                select answer_id
+                from tz_answer
+                where question_id = #{questionId} and del_flag = '0' and status = '1'
+            ) t
+        )
+        where question_id = #{questionId}
+    </update>
+
+    <update id="recountQuestionFavoriteCount" parameterType="Long">
+        update tz_question
+        set favorite_count = (
+            select count(1)
+            from (
+                select question_id
+                from tz_question_favorite
+                where question_id = #{questionId}
+            ) t
+        )
+        where question_id = #{questionId}
+    </update>
+
+    <select id="selectOverview" resultType="com.ruoyi.system.domain.tongzhou.vo.TzOverviewVo">
+        select
+            (select count(1) from tz_question where del_flag = '0') as question_count,
+            (select count(1) from tz_answer where del_flag = '0') as answer_count,
+            (select count(1) from tz_category where del_flag = '0') as category_count,
+            (select count(1) from tz_question where del_flag = '0' and status = '0') as pending_question_count,
+            (select count(1) from tz_answer where del_flag = '0' and status = '0') as pending_answer_count,
+            (select count(1) from tz_question_favorite) as favorite_count
+    </select>
+
+</mapper>

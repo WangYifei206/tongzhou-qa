@@ -1,0 +1,14 @@
+[Unit]
+Description=Tongzhou QA
+After=network.target mysql.service redis-server.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/tongzhou
+ExecStart=/bin/bash /opt/tongzhou/start.sh
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target
